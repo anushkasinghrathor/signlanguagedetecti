@@ -1,0 +1,42 @@
+camera:
+  index: 0
+  width: 640
+  height: 480
+  fps: 30
+
+mediapipe:
+  max_num_hands: 2
+  min_detection_confidence: 0.7
+  min_tracking_confidence: 0.5
+
+dataset:
+  static_dir: "data/static"
+  dynamic_dir: "data/dynamic"
+  samples_per_static_class: 150
+  sequences_per_dynamic_class: 40
+  sequence_length: 30  # 30 frames ≈ 1.0 second at 30 FPS
+
+vocabulary:
+  static_gestures:
+    - "A"
+    - "B"
+    - "C"
+    - "ThumbsUp"
+    - "Peace"
+  dynamic_gestures:
+    - "Hello"
+    - "ThankYou"
+    - "Yes"
+
+models:
+  static_model_path: "models/static_mlp.joblib"
+  dynamic_model_path: "models/dynamic_lstm.pt"
+  confidence_threshold: 0.85
+  # Hand movement velocity threshold distinguishing static poses from dynamic gestures
+  velocity_threshold: 0.04
+
+tts:
+  enabled: true
+  rate: 160
+  volume: 1.0
+  cooldown_seconds: 2.0
