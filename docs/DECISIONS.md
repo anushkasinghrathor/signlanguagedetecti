@@ -52,6 +52,36 @@
 
 ---
 
+## D-004: Threaded Offline TTS Worker (`pyttsx3`) with Bounded Queue & Debounce
+- **Date:** 2026-11-18
+- **Model:** Gemini 3.8 Flash High
+- **Context:** Real-time sign recognition must convert recognized text to audible speech without blocking or freezing the 30 FPS OpenCV capture and inference loop.
+- **Options:**
+  1. *Inline `pyttsx3.runAndWait()` on the main thread:* Simplest code, but blocks the video loop for 1-3 seconds per word, causing severe frame drops.
+  2. *Cloud TTS (`gTTS` / online API):* Natural voices, but introduces network dependency, internet latency, and privacy/availability failure modes.
+  3. *Dedicated daemon worker thread with `pyttsx3` (Windows SAPI5), bounded `queue.Queue(maxsize=3)`, and cooldown debouncing (Chosen):* Zero network dependency, non-blocking O(1) enqueue from the main video thread, and drops stale queued speech if signs occur faster than playback.
+- **Chosen:** Option 3
+- **Why:** Guarantees offline reliability and isolates blocking SAPI5 audio playback from the real-time OpenCV thread. Bounded queue prevents audio backlog lag, and a configurable cooldown (default 2.0s) stops continuous repetition of held signs.
+- **Trade-off:** Robotic system SAPI5 voice quality and Windows COM initialization needed inside the worker thread (`CoInitialize`).
+- **Revisit if:** Natural neural voices (e.g. Piper/Kokoro local ONNX TTS) are required for production accessibility.
+
+---
+
+## D-005: Sliding-Window Majority Smoothing & Smoothed Velocity Routing
+- **Date:** 2026-11-18
+- **Model:** Gemini 3.8 Flash High
+- **Context:** Frame-by-frame ML predictions flicker during hand transitions, and raw single-frame hand velocity can spike from landmark jitter, causing unintended switching between static (MLP) and dynamic (LSTM) models.
+- **Options:**
+  1. *Raw per-frame argmax prediction:* Zero added latency, but causes severe text flickering and false TTS triggers during transitions.
+  2. *Exponential Moving Average (EMA) on probability vectors:* Works well for a single model, but harder to combine cleanly across two models with different vocabularies (static vs dynamic).
+  3. *Fixed `deque(maxlen=10)` majority-vote smoother (confidence $\ge 0.85$, consensus $\ge 6/10$) + 5-frame velocity moving average for AUTO routing (Chosen):* Model-agnostic, eliminates single-frame noise, resets cleanly when hands leave the frame, and supports manual override (`m` key).
+- **Chosen:** Option 3
+- **Why:** Works seamlessly across both MLP and LSTM label spaces, adds only ~0.2s latency at 30 FPS, and keeps screen text and voice output rock-steady.
+- **Trade-off:** ~200ms confirmation delay before a new sign locks in; acceptable for clear assistive communication.
+- **Revisit if:** Continuous fast fingerspelling requires sub-100ms response times (reduce window from 10 to 5 frames).
+
+---
+
 <!--
 Template for next entries:
 

@@ -35,8 +35,10 @@ def test_normalize_landmarks_translation_invariance():
 
     norm_original = normalize_landmarks(pts)
 
-    # Apply substantial translation offset
-    offset = np.array([150.5, -82.3, 45.0], dtype=np.float32)
+    # Apply realistic frame translation offset (MediaPipe coords live in [0, 1])
+    # WHY: Float32 mantissa has ~7 decimal digits of precision; adding offsets > 100
+    # introduces catastrophic cancellation in lower bits.
+    offset = np.array([0.45, -0.25, 0.10], dtype=np.float32)
     pts_translated = pts + offset
 
     norm_translated = normalize_landmarks(pts_translated)
